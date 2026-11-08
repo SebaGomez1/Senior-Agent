@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <base href="about:blank">
+    <script>(function(){
+    var oldLog = console.log;
+    var oldWarn = console.warn;
+    var oldErr = console.error;
+    console.log = function(){
+      try { window.parent.postMessage({type:'APP_PREVIEW_LOG',payload:{level:'info',message:Array.from(arguments).join(' ')}},'*'); } catch(e){}
+      if (oldLog) oldLog.apply(console, arguments);
+    };
+    console.warn = function(){
+      try { window.parent.postMessage({type:'APP_PREVIEW_LOG',payload:{level:'warn',message:Array.from(arguments).join(' ')}},'*'); } catch(e){}
+      if (oldWarn) oldWarn.apply(console, arguments);
+    };
+    console.error = function(){
+      try { window.parent.postMessage({type:'APP_PREVIEW_LOG',payload:{level:'error',message:Array.from(arguments).join(' ')}},'*'); } catch(e){}
+      if (oldErr) oldErr.apply(console, arguments);
+    };
+  })();</script>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body { margin: 0; background-color: #080b0e; color: #f8fafc; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+
+</style>
+  </head>
+  <body class="bg-[#080b0e] text-slate-100 min-h-screen">
+    <div id="root" class="min-h-screen"></div>
+    
+    <script id="__sandbox_files_data" type="application/json">
+[{"path":"KaSe-Marcketing-Digital--main/src/App.tsx","normalizedPath":"App.tsx","fileName":"App.tsx","baseName":"App","content":"\n      import React from 'react';\n      export default function MiAppDelZip() {\n        return \u003ch1\u003e¡Esta es mi verdadera aplicación del ZIP!\u003c/h1\u003e;\n      }\n    "}]
+    </script>
+    <script>
+      (function() {
+        var filesDataEl = document.getElementById('__sandbox_files_data');
+        var files = [];
+        try {
+          files = JSON.parse(filesDataEl ? filesDataEl.textContent : '[]');
+        } catch(e) {
+          console.error('[Error parsing sandbox files]', e);
+        }
+
+        var entryPath = "KaSe-Marcketing-Digital--main/src/App.tsx";
+        var bootstrapPath = "";
+        var isMountedSuccessfully = false;
+
+        // Configuración de entorno global
+        window.process = window.process || { env: { NODE_ENV: 'production' } };
+        window.global = window;
+        window.__ENV__ = {
+          MODE: 'production',
+          DEV: false,
+          PROD: true,
+          BASE_URL: '/',
+          VITE_APP_URL: window.location.origin
+        };
+
+        window.__markMounted = function() {
+          if (isMountedSuccessfully) return;
+          isMountedSuccessfully = true;
+          try {
+            window.parent.postMessage({ type: 'APP_PREVIEW_STATUS', payload: { mode: 'native' } }, '*');
+          } catch(e) {}
+        };
+
+        // UI inicial de carga
+        var rootEl = document.getElementById('root');
+        if (rootEl) {
+          rootEl.innerHTML = '<div id="__sandbox_init" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:520px;color:#94a3b8;font-family:system-ui,-apple-system,sans-serif;gap:14px;"><div style="width:32px;height:32px;border:3px solid rgba(16,185,129,0.2);border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite;"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style><span style="font-size:12px;font-family:monospace;color:#34d399;font-weight:600;">Inicializando entorno de tu aplicación...</span></div>';
+        }
+
+        // Bucle de espera para asegurar que Babel, React y ReactDOM desde el CDN estén listos
+        var checkAttempts = 0;
+        function waitForCdnEngines() {
+          checkAttempts++;
+          if (typeof Babel !== 'undefined' && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
+            initModuleRuntime();
+          } else if (checkAttempts < 100) {
+            setTimeout(waitForCdnEngines, 50);
+          } else {
+            if (rootEl) {
+              rootEl.innerHTML = '<div style="padding:32px;text-align:center;color:#f87171;font-family:monospace;font-size:12px;"><p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Tiempo de espera agotado al conectar con los motores CDN</p><p style="color:#94a3b8;">No se pudo cargar Babel o React. Revisa tu conexión de red o recarga el lienzo.</p></div>';
+            }
+          }
+        }
+
+        function initModuleRuntime() {
+          // Aliases estándar de React en window
+          window.React = React;
+          window.useState = React.useState;
+          window.useEffect = React.useEffect;
+          window.useMemo = React.useMemo;
+          window.useRef = React.useRef;
+          window.useCallback = React.useCallback;
+          window.useContext = React.useContext;
+          window.createContext = React.createContext;
+          window.Fragment = React.Fragment;
+          window.createElement = React.createElement;
+          window.cloneElement = React.cloneElement;
+          window.Children = React.Children;
+          window.useId = React.useId || function() { return 'id-' + Math.random().toString(36).substr(2, 9); };
+
+          window.ReactDOM = ReactDOM;
+          window.createRoot = function(c) {
+            if (ReactDOM.createRoot) return ReactDOM.createRoot(c);
+            return {
+              render: function(elem) { ReactDOM.render(elem, c); },
+              unmount: function() { ReactDOM.unmountComponentAtNode(c); }
+            };
+          };
+
+          // Proxies y mocks universales para paquetes no provistos en CDN
+          function createUniversalMock(name) {
+            var mockComp = function(props) {
+              var p = props || {};
+              var iconKey = String(name).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+              if (window.lucide && window.lucide.icons && window.lucide.icons[iconKey]) {
+                try {
+                  return React.createElement('span', {
+                    className: 'inline-flex items-center justify-center ' + (p.className || ''),
+                    dangerouslySetInnerHTML: {
+                      __html: window.lucide.icons[iconKey].toSvg({
+                        class: p.className || '',
+                        width: p.size || 16,
+                        height: p.size || 16
+                      })
+                    }
+                  });
+                } catch(e) {}
+              }
+              if (p.children) return React.createElement('div', { className: p.className }, p.children);
+              return React.createElement('span', { className: 'text-slate-400 font-mono text-[11px]' }, name);
+            };
+
+            return new Proxy(mockComp, {
+              get: function(t, prop) {
+                if (prop === 'then') return function(r) { return Promise.resolve({ data: [] }).then(r); };
+                if (prop === '$$typeof') return undefined;
+                if (prop === '__esModule') return true;
+                if (prop === 'default') return mockComp;
+                return createUniversalMock(name + '.' + String(prop));
+              }
+            });
+          }
+
+          window.clsx = window.cn = function() { return Array.prototype.slice.call(arguments).filter(Boolean).join(' '); };
+          window.twMerge = window.clsx;
+          window.cva = function(base) { return function() { return base || ''; }; };
+
+          window.lucideReact = new Proxy({}, { get: function(t, p) { return createUniversalMock(String(p)); } });
+          window['lucide-react'] = window.lucideReact;
+
+          window.axios = {
+            get: function() { return Promise.resolve({ data: {} }); },
+            post: function() { return Promise.resolve({ data: {} }); },
+            put: function() { return Promise.resolve({ data: {} }); },
+            delete: function() { return Promise.resolve({ data: {} }); },
+            create: function() { return window.axios; }
+          };
+
+          window.createClient = function() {
+            var q = {
+              select: function() { return q; },
+              insert: function() { return q; },
+              update: function() { return q; },
+              delete: function() { return q; },
+              eq: function() { return q; },
+              neq: function() { return q; },
+              order: function() { return q; },
+              limit: function() { return q; },
+              single: function() { return Promise.resolve({ data: {}, error: null }); },
+              then: function(r) { return Promise.resolve({ data: [], error: null }).then(r); }
+            };
+            return {
+              from: function() { return q; },
+              auth: {
+                getUser: function() { return Promise.resolve({ data: { user: { id: 'usr-1', email: 'test@example.com' } }, error: null }); },
+                getSession: function() { return Promise.resolve({ data: { session: null }, error: null }); },
+                onAuthStateChange: function() { return { data: { subscription: { unsubscribe: function() {} } } }; }
+              }
+            };
+          };
+
+          // Cache de módulos CommonJS ejecutados
+          var moduleCache = {};
+
+          function normalizeLookup(p) {
+            if (!p) return '';
+            var clean = p.replace(/\\/g, '/');
+            var srcIdx = clean.indexOf('/src/');
+            if (srcIdx !== -1) clean = clean.substring(srcIdx + 5);
+            else if (clean.startsWith('src/')) clean = clean.substring(4);
+            return clean.replace(/^(\.\/|\.\.\/|@\/)+/, '').replace(/\.(tsx|jsx|ts|js|json|css)$/, '').trim();
+          }
+
+          function findProjectFile(specifier, fromPath) {
+            var cleanSpec = normalizeLookup(specifier);
+            var baseSpec = cleanSpec.split('/').pop();
+
+            // 1. Coincidencia exacta de ruta
+            var found = files.find(function(f) {
+              return f.path === specifier || normalizeLookup(f.path) === cleanSpec;
+            });
+            if (found) return found;
+
+            // 2. Coincidencia relativa desde la carpeta del archivo que requiere
+            if (fromPath) {
+              var fromDir = fromPath.split('/').slice(0, -1).join('/');
+              var combined = normalizeLookup(fromDir + '/' + specifier);
+              found = files.find(function(f) { return normalizeLookup(f.path) === combined; });
+              if (found) return found;
+            }
+
+            // 3. Coincidencia por nombre base del archivo
+            found = files.find(function(f) {
+              return f.baseName === baseSpec || f.fileName.replace(/\.(tsx|jsx|ts|js|json|css)$/, '') === baseSpec;
+            });
+            return found;
+          }
+
+          function __require__(specifier, fromPath) {
+            if (!specifier) return createUniversalMock('Unknown');
+
+            // Paquetes conocidos del ecosistema React
+            if (specifier === 'react') {
+              var R = window.React;
+              return Object.assign(R, { default: R, __esModule: true });
+            }
+            if (specifier === 'react-dom') {
+              var RD = window.ReactDOM;
+              return Object.assign(RD, { default: RD, __esModule: true });
+            }
+            if (specifier === 'react-dom/client') {
+              return {
+                createRoot: window.ReactDOM.createRoot,
+                hydrateRoot: window.ReactDOM.hydrateRoot,
+                default: window.ReactDOM,
+                __esModule: true
+              };
+            }
+            if (specifier === 'lucide-react' || specifier.includes('lucide')) {
+              return window['lucide-react'];
+            }
+            if (specifier === 'clsx' || specifier === 'tailwind-merge') {
+              return { clsx: window.clsx, twMerge: window.clsx, default: window.clsx, __esModule: true };
+            }
+            if (specifier === 'axios') {
+              return Object.assign(window.axios, { default: window.axios, __esModule: true });
+            }
+            if (specifier === '@supabase/supabase-js') {
+              return { createClient: window.createClient, default: { createClient: window.createClient }, __esModule: true };
+            }
+            if (specifier === 'react-router-dom' || specifier === 'react-router') {
+              return {
+                useNavigate: function() { return function() {}; },
+                useLocation: function() { return { pathname: '/', search: '', hash: '' }; },
+                useParams: function() { return {}; },
+                useSearchParams: function() { return [new URLSearchParams(), function() {}]; },
+                Link: function(p) { return React.createElement('a', { href: p.to || '#', className: p.className }, p.children); },
+                NavLink: function(p) { return React.createElement('a', { href: p.to || '#', className: p.className }, p.children); },
+                BrowserRouter: function(p) { return p.children; },
+                Routes: function(p) { return p.children; },
+                Route: function(p) { return p.element || null; },
+                Outlet: function() { return null; },
+                default: {},
+                __esModule: true
+              };
+            }
+            if (specifier === 'framer-motion' || specifier === 'motion' || specifier === 'motion/react') {
+              var motionProxy = new Proxy({}, {
+                get: function(t, tag) {
+                  return function(props) {
+                    var p = props || {};
+                    return React.createElement(tag || 'div', p, p.children);
+                  };
+                }
+              });
+              return {
+                motion: motionProxy,
+                AnimatePresence: function(p) { return p.children; },
+                default: { motion: motionProxy },
+                __esModule: true
+              };
+            }
+
+            // Archivos de estilos o assets estáticos
+            if (specifier.match(/\.(css|scss|sass|less|svg|png|jpg|webp)$/i)) {
+              return { default: '', __esModule: true };
+            }
+
+            // Búsqueda en los archivos locales del proyecto subido
+            var localFile = findProjectFile(specifier, fromPath);
+            if (!localFile) {
+              return createUniversalMock(specifier);
+            }
+
+            // Si ya fue evaluado, devolver exports en cache
+            if (moduleCache[localFile.path]) {
+              return moduleCache[localFile.path].exports;
+            }
+
+            // Si es un archivo JSON local
+            if (localFile.path.endsWith('.json')) {
+              try {
+                var jsonVal = JSON.parse(localFile.content);
+                var jsonMod = { exports: jsonVal, default: jsonVal, __esModule: true };
+                moduleCache[localFile.path] = jsonMod;
+                return jsonVal;
+              } catch(e) {
+                return {};
+              }
+            }
+
+            // Transpilar el código local usando Babel con preset env (CommonJS) y React/TypeScript
+            var mod = { exports: {} };
+            moduleCache[localFile.path] = mod;
+
+            var cleanCode = localFile.content
+              .replace(/import\.meta\.env/g, '(window.__ENV__ || {})')
+              .replace(/import\.meta/g, '({ url: window.location.href, env: (window.__ENV__ || {}) })')
+              .replace(/process\.env/g, '(window.process?.env || {})')
+              .replace(/<\/script/gi, '<\\/script');
+
+            try {
+              var transpiled = Babel.transform(cleanCode, {
+                presets: [
+                  ['env', { modules: 'commonjs' }],
+                  ['react', { runtime: 'classic' }],
+                  'typescript'
+                ],
+                filename: localFile.fileName || 'module.tsx'
+              }).code;
+
+              var runner = new Function(
+                'require', 'module', 'exports', 'React', 'ReactDOM', 'window', 'document',
+                transpiled
+              );
+
+              runner(
+                function(reqPath) { return __require__(reqPath, localFile.path); },
+                mod,
+                mod.exports,
+                window.React,
+                window.ReactDOM,
+                window,
+                document
+              );
+            } catch(transpileErr) {
+              console.error('[Error al transpilar módulo]', localFile.path, transpileErr);
+              throw new Error('Fallo en [' + localFile.path + ']: ' + transpileErr.message);
+            }
+
+            return mod.exports;
+          }
+
+          // Ejecución del punto de entrada principal
+          try {
+            // 1. Si existe bootstrap (main.tsx o index.tsx), ejecutarlo primero
+            if (bootstrapPath) {
+              try {
+                __require__(bootstrapPath, '');
+              } catch(bootErr) {
+                console.warn('[Bootstrap Warning]', bootErr.message);
+              }
+            }
+
+            var rootContainer = document.getElementById('root');
+
+            // 2. Si el bootstrap ya montó la app en #root
+            if (rootContainer && rootContainer.children && rootContainer.children.length > 0 && !rootContainer.querySelector('#__sandbox_init')) {
+              window.__markMounted();
+              return;
+            }
+
+            // 3. Ejecutar y renderizar el componente de App.tsx
+            var targetEntry = entryPath || (files.find(function(f) { return f.path.match(/App\.(?:tsx|jsx|js|ts)$/i); })?.path) || (files[0] ? files[0].path : '');
+            var entryExports = __require__(targetEntry, '');
+            var AppComp = (entryExports && entryExports.default) ? entryExports.default : entryExports;
+
+            if (typeof AppComp !== 'function' && typeof AppComp !== 'object') {
+              if (typeof window.App === 'function') AppComp = window.App;
+              else if (typeof window.default === 'function') AppComp = window.default;
+            }
+
+            if (rootContainer) {
+              rootContainer.innerHTML = '';
+              if (typeof AppComp === 'function' || (typeof AppComp === 'object' && AppComp && AppComp.$$typeof)) {
+                var props = { isOpen: true, open: true, title: 'App' };
+                if (window.ReactDOM.createRoot) {
+                  window.ReactDOM.createRoot(rootContainer).render(React.createElement(AppComp, props));
+                } else if (window.ReactDOM.render) {
+                  window.ReactDOM.render(React.createElement(AppComp, props), rootContainer);
+                }
+                window.__markMounted();
+              } else {
+                rootContainer.innerHTML = '<div style="padding:40px;text-align:center;color:#94a3b8;font-family:monospace;font-size:12px;"><p style="color:#34d399;font-weight:bold;font-size:14px;margin-bottom:8px;">Módulos cargados exitosamente</p><p>El punto de entrada [' + targetEntry + '] no exportó un componente React estándar por defecto.</p></div>';
+                window.__markMounted();
+              }
+            }
+          } catch(appErr) {
+            console.error('[Error de Ejecución de la App]', appErr);
+            if (rootContainer) {
+              rootContainer.innerHTML = '<div style="padding:24px;margin:20px;background:#13111c;border:1px solid #ef4444;border-radius:12px;color:#fca5a5;font-family:monospace;font-size:12px;line-height:1.6;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="color:#ef4444;font-size:16px;">⚠️</span><strong style="color:#f87171;font-size:13px;">Error de Inicialización en tu Aplicación</strong></div><p style="margin:0 0 10px 0;color:#fecaca;">' + (appErr.message || String(appErr)) + '</p><div style="font-size:11px;color:#94a3b8;">Revisa la consola inferior para ver los detalles del error o la traza de dependencias.</div></div>';
+            }
+            try {
+              window.parent.postMessage({ type: 'APP_PREVIEW_STATUS', payload: { mode: 'native' } }, '*');
+            } catch(e) {}
+          }
+        }
+
+        waitForCdnEngines();
+      })();
+    </script>
+  
+  </body>
+  </html>

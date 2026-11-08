@@ -1,0 +1,6 @@
+{
+  "name": "Gemini Code Pipeline Studio",
+  "description": "Arquitectura y pipeline multi-agente con Gemini API, validación matemática de sintaxis AST y auto-reparación para modificación segura de código sin errores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
