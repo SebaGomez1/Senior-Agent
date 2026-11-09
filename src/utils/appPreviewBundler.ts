@@ -589,6 +589,17 @@ ${safeFilesJson}
               .replace(/process\\.env/g, '(window.process?.env || {})')
               .replace(/<\\/script/gi, '<\\\\/script');
 
+              // Si es un archivo CSS, evitamos que Babel intente compilarlo como JavaScript
+if (localFile.path.endsWith('.css')) {
+  var styleEl = window.document.createElement('style');
+  styleEl.textContent = cleanCode;
+  window.document.head.appendChild(styleEl);
+  
+  // Guardamos un módulo vacío para que la app no tire error al hacer el import 'archivo.css'
+  moduleCache[localFile.path] = { exports: {} };
+  continue; 
+}
+
             try {
               var transpiled = Babel.transform(cleanCode, {
                 presets: [
