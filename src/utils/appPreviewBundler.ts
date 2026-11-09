@@ -199,46 +199,37 @@ export function buildDeliveredAppHtml(
       const React = window.React || __require__('react');
       const ReactDOM = window.ReactDOM || __require__('react-dom');
       
-            const rootEl = document.getElementById('root');
-      if (rootEl) {
+                  if (rootEl) {
         const root = ReactDOM.createRoot ? ReactDOM.createRoot(rootEl) : null;
         
-                // Intentamos cargar por la ruta detectada o barremos las opciones comunes
-        const possibleEntries = [
-          "./src/main.tsx",
-          "./src/App.tsx",
-          "./main.tsx",
-          "./index.tsx"
-        ];
+        // Escaneamos la memoria virtual buscando el componente de React sin importar la ruta
+        const allModules = window.__modules__ || {};
+        let MainComponent = null;
         
-        // Buscamos dinámicamente cualquier ruta que termine en App.tsx o main.tsx en los módulos cargados
-        const allModulePaths = Object.keys(window.__modules__ || {});
-        const dynamicEntry = allModulePaths.find(p => p.endsWith('src/App.tsx') || p.endsWith('src/main.tsx') || p.endsWith('App.tsx') || p.endsWith('main.tsx'));
-        
-        if (dynamicEntry) {
-          possibleEntries.unshift(dynamicEntry);
-        }
-
-        let loaded = false;
-        
-        function tryLoad(index) {
-          if (index >= possibleEntries.length || loaded) return;
-          
-          window.__modules__.require(possibleEntries[index], function(mod) {
-            loaded = true;
-            const Component = mod.default || mod.App || (typeof mod === 'function' ? mod : Object.values(mod)[0]);
-            if (Component) {
-              if (root) root.render(React.createElement(Component));
-              else ReactDOM.render(React.createElement(Component), rootEl);
+        for (const path in allModules) {
+          if (path.endsWith('App.tsx') || path.endsWith('main.tsx') || path.endsWith('App.js') || path.endsWith('main.js') || path.endsWith('App.jsx')) {
+            const mod = allModules[path];
+            if (mod) {
+              // Extraemos el componente ya sea default, nombrado o directo
+              MainComponent = mod.default || mod.App || (typeof mod === 'function' ? mod : null);
+              if (!MainComponent && typeof mod === 'object') {
+                MainComponent = Object.values(mod).find(v => typeof v === 'function' || (v && typeof v === 'object'));
+              }
+              if (MainComponent) break;
             }
-          }, function(err) {
-            // Si falla este intento, probamos con la siguiente ruta común del array
-            tryLoad(index + 1);
-          });
+          }
         }
         
-        tryLoad(0);
+        // Si lo encontramos, lo forzamos a dibujarse rompiendo el bloqueo de carpetas
+        if (MainComponent) {
+          if (root) root.render(React.createElement(MainComponent));
+          else ReactDOM.render(React.createElement(MainComponent), rootEl);
+        } else {
+          console.error("Pipeline Error: No se pudo localizar el componente raíz dentro del mapa de módulos.");
+        }
       }
+
+        
 
       }
     </script>
