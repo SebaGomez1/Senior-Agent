@@ -170,7 +170,33 @@ export function buildDeliveredAppHtml(
   </head>
   <body class="bg-[#080b0e] text-slate-100 min-h-screen">
     <div id="root" class="min-h-screen"></div>
-    ${launcherScript}
+        <script type="module">
+      // Cargamos React de forma interna en el iframe
+      const React = window.React || __require__('react');
+      const ReactDOM = window.ReactDOM || __require__('react-dom');
+      
+      const rootEl = document.getElementById('root');
+      if (rootEl) {
+        // Inicializador universal compatible con React 18/19
+        const root = ReactDOM.createRoot ? ReactDOM.createRoot(rootEl) : null;
+        
+        // Buscamos el archivo de entrada correcto en los módulos compilados
+        const entryPath = "${mainEntry?.path || 'App.tsx'}";
+        
+        // Importamos dinámicamente el componente del ZIP para dibujarlo en pantalla
+        window.__modules__.require('./' + entryPath, function(mod) {
+          const Component = mod.default || mod.App || Object.values(mod)[0];
+          if (root) {
+            root.render(React.createElement(Component));
+          } else {
+            ReactDOM.render(React.createElement(Component), rootEl);
+          }
+        }, function(err) {
+          console.error("Error al montar la aplicación desde el ZIP:", err);
+        });
+      }
+    </script>
+
   </body>
   </html>`;
 
