@@ -175,25 +175,40 @@ export function buildDeliveredAppHtml(
       const React = window.React || __require__('react');
       const ReactDOM = window.ReactDOM || __require__('react-dom');
       
-      const rootEl = document.getElementById('root');
+            const rootEl = document.getElementById('root');
       if (rootEl) {
-        // Inicializador universal compatible con React 18/19
         const root = ReactDOM.createRoot ? ReactDOM.createRoot(rootEl) : null;
         
-        // Buscamos el archivo de entrada correcto en los módulos compilados
-        const entryPath = "${mainEntry?.path || 'App.tsx'}";
+        // Intentamos cargar por la ruta detectada o barremos las opciones comunes
+        const possibleEntries = [
+          "./${mainEntry?.path || 'App.tsx'}",
+          "./src/main.tsx",
+          "./src/App.tsx",
+          "./main.tsx",
+          "./index.tsx"
+        ];
         
-        // Importamos dinámicamente el componente del ZIP para dibujarlo en pantalla
-        window.__modules__.require('./' + entryPath, function(mod) {
-          const Component = mod.default || mod.App || Object.values(mod)[0];
-          if (root) {
-            root.render(React.createElement(Component));
-          } else {
-            ReactDOM.render(React.createElement(Component), rootEl);
-          }
-        }, function(err) {
-          console.error("Error al montar la aplicación desde el ZIP:", err);
-        });
+        let loaded = false;
+        
+        function tryLoad(index) {
+          if (index >= possibleEntries.length || loaded) return;
+          
+          window.__modules__.require(possibleEntries[index], function(mod) {
+            loaded = true;
+            const Component = mod.default || mod.App || (typeof mod === 'function' ? mod : Object.values(mod)[0]);
+            if (Component) {
+              if (root) root.render(React.createElement(Component));
+              else ReactDOM.render(React.createElement(Component), rootEl);
+            }
+          }, function(err) {
+            // Si falla este intento, probamos con la siguiente ruta común del array
+            tryLoad(index + 1);
+          });
+        }
+        
+        tryLoad(0);
+      }
+
       }
     </script>
 
