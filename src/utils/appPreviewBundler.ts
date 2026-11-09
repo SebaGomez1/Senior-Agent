@@ -168,9 +168,33 @@ export function buildDeliveredAppHtml(
     ${consoleBridgeScript}
     ${cdnHeader}
   </head>
-  <body class="bg-[#080b0e] text-slate-100 min-h-screen">
+    <body class="bg-[#0b0b0e] text-slate-100 min-h-screen" style="margin: 0; padding: 0; overflow: hidden;">
+    <!-- PANTALLA DE CARGA ANIMADA (SPINNER PROFESSIONAL) -->
+    <div id="pipeline-loading-screen" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000b0e; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 99999; font-family: sans-serif;">
+      <div style="width: 50px; height: 50px; border: 3px solid rgba(16, 185, 129, 0.2); border-top: 3px solid #10b981; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+      <div style="color: #10b981; font-size: 16px; font-weight: 500; letter-spacing: 0.5px;">Renderizando componentes visuales...</div>
+    </div>
+
+    <style>
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+
     <div id="root" class="min-h-screen"></div>
-        <script type="module">
+
+    <script type="module">
+      // Mecanismo inteligente: En cuanto React logre inyectar el primer elemento dentro de #root, apagamos el Spinner
+      const observer = new MutationObserver((mutations) => {
+        const loadingScreen = document.getElementById('pipeline-loading-screen');
+        if (loadingScreen && document.getElementById('root').children.length > 0) {
+          loadingScreen.style.opacity = '0';
+          setTimeout(() => loadingScreen.remove(), 300);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.getElementById('root'), { childList: true, subtree: true });
+    
+
+      
       // Cargamos React de forma interna en el iframe
       const React = window.React || __require__('react');
       const ReactDOM = window.ReactDOM || __require__('react-dom');
