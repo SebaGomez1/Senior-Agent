@@ -203,15 +203,22 @@ export function buildDeliveredAppHtml(
       if (rootEl) {
         const root = ReactDOM.createRoot ? ReactDOM.createRoot(rootEl) : null;
         
-        // Intentamos cargar por la ruta detectada o barremos las opciones comunes
+                // Intentamos cargar por la ruta detectada o barremos las opciones comunes
         const possibleEntries = [
-          "./${mainEntry?.path || 'App.tsx'}",
           "./src/main.tsx",
           "./src/App.tsx",
           "./main.tsx",
           "./index.tsx"
         ];
         
+        // Buscamos dinámicamente cualquier ruta que termine en App.tsx o main.tsx en los módulos cargados
+        const allModulePaths = Object.keys(window.__modules__ || {});
+        const dynamicEntry = allModulePaths.find(p => p.endsWith('src/App.tsx') || p.endsWith('src/main.tsx') || p.endsWith('App.tsx') || p.endsWith('main.tsx'));
+        
+        if (dynamicEntry) {
+          possibleEntries.unshift(dynamicEntry);
+        }
+
         let loaded = false;
         
         function tryLoad(index) {
