@@ -203,8 +203,10 @@ export function buildDeliveredAppHtml(
         const root = ReactDOM.createRoot ? ReactDOM.createRoot(rootEl) : null;
         
         // Escaneamos la memoria virtual buscando el componente de React sin importar la ruta
-        const allModules = window.__modules__ || {};
-        let MainComponent = null;
+                // Capturamos los módulos tanto si vienen planos como si vienen anidados en .modules
+        const baseModules = window.__modules__ || {};
+        const allModules = baseModules.modules || baseModules;
+
         
         for (const path in allModules) {
           if (path.endsWith('App.tsx') || path.endsWith('main.tsx') || path.endsWith('App.js') || path.endsWith('main.js') || path.endsWith('App.jsx')) {
