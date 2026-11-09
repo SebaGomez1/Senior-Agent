@@ -224,9 +224,9 @@ export function buildDeliveredAppHtml(
         if (MainComponent) {
           if (root) root.render(React.createElement(MainComponent));
           else ReactDOM.render(React.createElement(MainComponent), rootEl);
-        } else {
-          console.error("Pipeline Error: No se pudo localizar el componente raíz dentro del mapa de módulos.");
-        }
+                  console.error("Pipeline Error: No se pudo localizar el componente raíz dentro del mapa de módulos.");
+          // Imprime la lista real de archivos para ver cómo se llama el principal en el ZIP:
+          console.log("Archivos detectados en memoria:", Object.keys(allModules));
       }
 
         
