@@ -42,6 +42,15 @@ export function transformCodeWithRequirements(
     .map((r) => r.trim())
     .filter((r) => r.length > 0);
 
+      // Escape ultra-seguro para archivos CSS en Pipeline
+  if (filePath.endsWith('.css')) {
+    return {
+      modifiedCode: code,
+      transformations: [],
+      success: true
+    };
+  }
+
   if (cleanReqs.length === 0) {
     return { modifiedCode: code, transformations: [], success: true };
   }
