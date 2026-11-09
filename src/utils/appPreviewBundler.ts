@@ -363,12 +363,19 @@ ${safeFilesJson}
 
           window.ReactDOM = ReactDOM;
           window.createRoot = function(c) {
-            if (ReactDOM.createRoot) return ReactDOM.createRoot(c);
-            return {
-              render: function(elem) { ReactDOM.render(elem, c); },
-              unmount: function() { ReactDOM.unmountComponentAtNode(c); }
-            };
-          };
+  if (ReactDOM.createRoot) {
+    const realRoot = ReactDOM.createRoot(c);
+    // Creamos un puente seguro para que si la app vieja o nueva busca .render, funcione de ambas formas
+    return {
+      render: function(elem) { realRoot.render(elem); },
+      unmount: function() { realRoot.unmount(); }
+    };
+  }
+  return {
+    render: function(elem) { ReactDOM.render(elem, c); },
+    unmount: function() { ReactDOM.unmountComponentAtNode(c); }
+  };
+};
 
           // Proxies y mocks universales para paquetes no provistos en CDN
           function createUniversalMock(name) {
