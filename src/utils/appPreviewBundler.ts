@@ -193,20 +193,20 @@ export function buildDeliveredAppHtml(
       });
       observer.observe(document.getElementById('root'), { childList: true, subtree: true });
     
-
-      
       // Cargamos React de forma interna en el iframe
       const React = window.React || __require__('react');
       const ReactDOM = window.ReactDOM || __require__('react-dom');
       
-                  if (rootEl) {
+      const rootEl = document.getElementById('root');
+      if (rootEl) {
         const root = ReactDOM.createRoot ? ReactDOM.createRoot(rootEl) : null;
         
         // Escaneamos la memoria virtual buscando el componente de React sin importar la ruta
-                // Capturamos los módulos tanto si vienen planos como si vienen anidados en .modules
+        // Capturamos los módulos tanto si vienen planos como si vienen anidados en .modules
         const baseModules = window.__modules__ || {};
         const allModules = baseModules.modules || baseModules;
-
+        console.log("Archivos detectados en memoria:", Object.keys(allModules));
+        let MainComponent = null;
         
         for (const path in allModules) {
           if (path.endsWith('App.tsx') || path.endsWith('main.tsx') || path.endsWith('App.js') || path.endsWith('main.js') || path.endsWith('App.jsx')) {
@@ -226,16 +226,13 @@ export function buildDeliveredAppHtml(
         if (MainComponent) {
           if (root) root.render(React.createElement(MainComponent));
           else ReactDOM.render(React.createElement(MainComponent), rootEl);
-                  console.error("Pipeline Error: No se pudo localizar el componente raíz dentro del mapa de módulos.");
+        } else {
+          console.error("Pipeline Error: No se pudo localizar el componente raíz dentro del mapa de módulos.");
           // Imprime la lista real de archivos para ver cómo se llama el principal en el ZIP:
           console.log("Archivos detectados en memoria:", Object.keys(allModules));
-      }
-
-        
-
+        }
       }
     </script>
-
   </body>
   </html>`;
 

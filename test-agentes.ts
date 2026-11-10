@@ -29,7 +29,7 @@ async function verificarConectividadAgentes() {
     console.log("\n📦 RESPUESTA DE LA IA:");
     console.log(response.text);
 
-    if (response.text.toLowerCase().includes('activo')) {
+    if (response.text?.toLowerCase().includes('activo')) {
       console.log("\n✅ ¡ÉXITO TOTAL! Tus agentes Gemini se autenticaron correctamente y están en línea.");
     } else {
       console.log("\n⚠️ ADVERTENCIA: Hubo respuesta, pero revisa el formato.");

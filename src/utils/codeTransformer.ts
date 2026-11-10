@@ -7,6 +7,7 @@
 
 import { inspectCodeDna } from './codeInspector';
 import { WORLD_192_COUNTRIES, getCitiesForCountry } from '../data/worldCountries';
+import { autoRepairDelimiterBalance } from './astValidator';
 
 export interface TransformationItem {
   id: number;
@@ -42,7 +43,7 @@ export function transformCodeWithRequirements(
     .map((r) => r.trim())
     .filter((r) => r.length > 0);
 
-      // Escape ultra-seguro para archivos CSS en Pipeline
+  // Escape ultra-seguro para archivos CSS en Pipeline
   if (filePath.endsWith('.css')) {
     return {
       modifiedCode: code,
@@ -252,6 +253,13 @@ export function transformCodeWithRequirements(
       appliedCode: generated,
     });
   });
+
+  // Blindaje matemático: asegurar que ninguna llave, corchete o paréntesis quede abierto
+  const lang = isPy ? 'python' : isTs ? 'typescript' : isJs ? 'javascript' : 'typescript';
+  const balanceRepair = autoRepairDelimiterBalance(workingCode, lang);
+  if (balanceRepair.closedCount > 0) {
+    workingCode = balanceRepair.repairedCode;
+  }
 
   return {
     modifiedCode: workingCode,

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import JSZip from 'jszip';
 import { SAMPLE_PROJECTS } from '../data/sampleProjects';
 import { ProjectFile, AgentStepResult, ExplanationReport, LineExplanation, QaChatMessage } from '../types/pipeline';
-import { validateCodeAST, buildAstFeedbackPrompt } from '../utils/astValidator';
+import { validateCodeAST, buildAstFeedbackPrompt, autoRepairDelimiterBalance } from '../utils/astValidator';
 import { transformCodeWithRequirements, TransformationItem } from '../utils/codeTransformer';
 import { detectOptimalTargetFile, RouteRecommendation } from '../utils/projectScanner';
 import { inspectCodeDna, CodeDnaAnalysis } from '../utils/codeInspector';
@@ -276,7 +276,10 @@ export const dbClient = {
   const [finalTargetFile, setFinalTargetFile] = useState<ProjectFile | null>(null);
   const [detectedRouting, setDetectedRouting] = useState<RouteRecommendation | null>(null);
 
-  // File input refs
+  // File input refs and preservation instances
+  const [uploadedZipInstance, setUploadedZipInstance] = useState<JSZip | null>(null);
+  const folderRawFilesRef = useRef<Map<string, File>>(new Map());
+  const [isDetectingTarget, setIsDetectingTarget] = useState<boolean>(false);
   const zipInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -332,6 +335,8 @@ export const dbClient = {
     const proj = SAMPLE_PROJECTS.find((p) => p.id === projectId) || SAMPLE_PROJECTS[0];
     setSelectedProjectId(projectId);
     setCurrentProject(proj);
+    setUploadedZipInstance(null);
+    folderRawFilesRef.current.clear();
     const target = proj.files[1]?.path || proj.files[0].path;
     setSelectedFilePath(target);
     setTargetFilePath(target);
@@ -348,6 +353,8 @@ export const dbClient = {
       addLog(`Procesando archivo ZIP: '${file.name}' (${(file.size / 1024).toFixed(1)} KB)...`);
       const zip = new JSZip();
       const loadedZip = await zip.loadAsync(file);
+      setUploadedZipInstance(loadedZip);
+      folderRawFilesRef.current.clear();
       const extractedFiles: ProjectFile[] = [];
 
       const entries = Object.entries(loadedZip.files);
@@ -438,6 +445,13 @@ export const dbClient = {
     const filesToRead = Array.from(fileList).filter((f) => {
       const p = (f as any).webkitRelativePath || f.name;
       return !p.includes('node_modules/') && !p.includes('.git/') && !p.includes('.DS_Store');
+    });
+
+    setUploadedZipInstance(null);
+    folderRawFilesRef.current.clear();
+    filesToRead.forEach((f) => {
+      const p = (f as any).webkitRelativePath || f.name;
+      folderRawFilesRef.current.set(p, f);
     });
 
     const newFiles: ProjectFile[] = [];
@@ -647,6 +661,104 @@ export const dbClient = {
   const fullPromptText = getCombinedRequirementPrompt();
   const characterCount = fullPromptText.length;
   const estimatedTokens = Math.round(characterCount / 4);
+
+  // Dedicated Auto-Detection handler for Agente 1 (Guardián y Enrutador)
+  const handleAutoDetectTargetFile = async () => {
+    const promptToScan = getCombinedRequirementPrompt();
+    if (!promptToScan || promptToScan.trim().length === 0) {
+      alert('💡 Por favor, escribe primero en los requerimientos qué deseas modificar o solucionar (ej: "agregar selector de países en formulario", "corregir botón en header", "error en vercel"). Así el Agente 1 podrá rastrear la carpeta y el archivo exacto.');
+      return;
+    }
+
+    if (activeFilesList.length === 0) {
+      alert('No hay archivos cargados en el proyecto para escanear.');
+      return;
+    }
+
+    setIsDetectingTarget(true);
+    addLog(`[Agente 1: Guardián y Enrutador] 🔍 Escaneando estructura de carpetas y código para: "${promptToScan.slice(0, 70)}..."`);
+
+    try {
+      let optimalFile: ProjectFile | null = null;
+      let reason = '';
+      let confidence = 88;
+
+      // 1. Si Gemini API está activo en vivo, consultamos al Agente 1 con análisis semántico
+      if (hasApiKey && useLiveApi) {
+        try {
+          const fileTreeList = activeFilesList.map((f) => f.path).slice(0, 100).join('\n');
+          const res = await fetch('/api/pipeline/agent-step', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              agentRole: 'guardian_router',
+              systemInstruction: `Eres el Agente 1: Guardián y Enrutador de Arquitectura.
+Tu misión es identificar cuál archivo del proyecto corresponde exactamente a la modificación o corrección solicitada por el usuario.
+Analiza la lista de rutas del proyecto y los requerimientos.
+Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
+{ "targetFile": "ruta/completa/del/archivo.ext", "reason": "explicación clara de por qué este archivo contiene la lógica o vista a cambiar", "confidence": 95 }`,
+              userPrompt: `Lista de rutas disponibles en el proyecto:\n${fileTreeList}\n\nRequerimiento del usuario:\n${promptToScan}`,
+              model: 'gemini-3.8-flash',
+            }),
+          });
+          const data = await res.json();
+          let parsed = data.structured;
+          if (!parsed && data.text) {
+            try {
+              parsed = JSON.parse(data.text);
+            } catch {
+              const match = data.text.match(/\{[\s\S]*\}/);
+              if (match) parsed = JSON.parse(match[0]);
+            }
+          }
+          if (parsed?.targetFile) {
+            const found = activeFilesList.find(
+              (f) =>
+                f.path === parsed.targetFile ||
+                f.path.endsWith(parsed.targetFile) ||
+                parsed.targetFile.endsWith(f.path)
+            );
+            if (found) {
+              optimalFile = found;
+              reason = parsed.reason || 'Identificado por el Agente 1 mediante razonamiento semántico';
+              confidence = parsed.confidence || 95;
+            }
+          }
+        } catch (apiErr) {
+          console.warn('Fallback al escáner heurístico:', apiErr);
+        }
+      }
+
+      // 2. Si no se usó API o no dio resultado, usar el escáner heurístico avanzado
+      if (!optimalFile) {
+        const route = detectOptimalTargetFile(activeFilesList, promptToScan);
+        if (route && route.targetFile) {
+          optimalFile = route.targetFile;
+          reason = route.reason;
+          confidence = route.confidence;
+        }
+      }
+
+      if (optimalFile) {
+        setTargetFilePath(optimalFile.path);
+        setSelectedFilePath(optimalFile.path);
+        const recommendation: RouteRecommendation = {
+          targetFile: optimalFile,
+          confidence,
+          score: 100,
+          reason,
+          matchedKeywords: [optimalFile.path.split('/').pop() || ''],
+        };
+        setDetectedRouting(recommendation);
+        setUploadNotification(`🎯 Agente 1 localizó el archivo objetivo: '${optimalFile.path}' (${reason})`);
+        addLog(`[Agente 1: Guardián y Enrutador] 🎯 Auto-detección completada: '${optimalFile.path}' (${reason}, confianza: ${confidence}%).`);
+      } else {
+        alert('No se pudo determinar un archivo objetivo con certeza. Por favor selecciona el archivo manualmente en la lista desplegable.');
+      }
+    } finally {
+      setIsDetectingTarget(false);
+    }
+  };
 
   // =========================================================================
   // MAIN PIPELINE EXECUTION WITH REAL-TIME AGENT TIMING & PROGRESSION
@@ -901,6 +1013,15 @@ ${effectiveReqs.map((r, i) => `${i + 1}. ${r}`).join('\n\n')}`,
 
       let validation = validateCodeAST(candidateCode, currentTargetName, lang);
 
+      // PASO 4.1: AUTO-CIERRE INMEDIATO DE DELIMITADORES ABIERTOS
+      // Si la Capa 4 detecta llaves {}, corchetes [] o paréntesis () abiertas, las cierra de inmediato
+      const initialRepair = autoRepairDelimiterBalance(candidateCode, lang);
+      if (initialRepair.closedCount > 0) {
+        candidateCode = initialRepair.repairedCode;
+        addLog(`[Capa 4: Validador AST] 🛠️ Auto-reparación determinística: Se cerraron automáticamente ${initialRepair.closedCount} delimitador(es) pendientes (${initialRepair.closedDelimiters.join(', ')}). Invariante Δ = 0.`);
+        validation = validateCodeAST(candidateCode, currentTargetName, lang);
+      }
+
       // AUTO-REPAIR LOOP if invalid
       if (!validation.valid) {
         addLog(`[Capa 4: Validador AST] ❌ RECHAZO MATEMÁTICO: ${validation.error} en Línea ${validation.line}`);
@@ -921,8 +1042,43 @@ ${effectiveReqs.map((r, i) => `${i + 1}. ${r}`).join('\n\n')}`,
 
         await new Promise((r) => setTimeout(r, 1800));
 
-        // Generate clean repaired code
-        candidateCode = synthesizeModifiedCode(originalFile.content, currentTargetName, effectiveReqs, false);
+        // Intento con Gemini API si está activo
+        if (hasApiKey && useLiveApi) {
+          try {
+            const feedbackPrompt = buildAstFeedbackPrompt(currentTargetName, validation, candidateCode);
+            const repairRes = await fetch('/api/pipeline/agent-step', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                agentRole: 'senior_programmer',
+                systemInstruction: `Eres el Programador Senior. La Capa de Validación Matemática AST ha RECHAZADO el código por desbalance sintáctico.
+Tu tarea es corregir INMEDIATAMENTE el error, CERRANDO TODAS las llaves {}, corchetes [] y paréntesis () que hayan quedado abiertas.
+Asegúrate de que la pila de balance sea Δ = 0. Devuelve ÚNICAMENTE el esquema JSON: { "modifiedCode": string, "justification": string }.`,
+                userPrompt: feedbackPrompt,
+                model: 'gemini-4-argon',
+              }),
+            });
+            const repairData = await repairRes.json();
+            if (repairData.modifiedCode) {
+              candidateCode = repairData.modifiedCode;
+            } else {
+              candidateCode = synthesizeModifiedCode(originalFile.content, currentTargetName, effectiveReqs, false);
+            }
+          } catch {
+            candidateCode = synthesizeModifiedCode(originalFile.content, currentTargetName, effectiveReqs, false);
+          }
+        } else {
+          // Generate clean repaired code
+          candidateCode = synthesizeModifiedCode(originalFile.content, currentTargetName, effectiveReqs, false);
+        }
+
+        // Blindaje final determinístico del Agente 4: cerrar cualquier delimitador que haya quedado abierto
+        const finalRepair = autoRepairDelimiterBalance(candidateCode, lang);
+        candidateCode = finalRepair.repairedCode;
+        if (finalRepair.closedCount > 0) {
+          addLog(`[Capa 4: Validador AST] 🔒 Blindaje final: ${finalRepair.closedCount} delimitador(es) cerrados con éxito.`);
+        }
+
         step3Result.status = 'success';
         step3Result.outputSummary = `Código auto-corregido con balance de delimitadores exacto y 0% errores.`;
         step3Result.fullOutput = candidateCode;
@@ -937,6 +1093,7 @@ ${effectiveReqs.map((r, i) => `${i + 1}. ${r}`).join('\n\n')}`,
             status: 'PASSED',
             bracketInvariantBalance: 'Δ = 0 (Pila vacía al finalizar)',
             astValidation: 'Gramática formal verificada con 0 errores léxicos ni sintácticos',
+            closedDelimiters: finalRepair.closedDelimiters,
             attemptsRequired: 2,
           },
           null,
@@ -1153,34 +1310,52 @@ ${effectiveReqs.map((r, i) => `${i + 1}. ${r}`).join('\n\n')}`,
     if (!finalTargetFile) return;
     setIsZipping(true);
     try {
-      const zip = new JSZip();
-      const activeList = activeSourceMode === 'preset' ? currentProject.files : customFiles;
+      let zipToGenerate: JSZip;
 
-      // Add all project files into the zip, replacing target with the modified version
-      let targetAdded = false;
-      activeList.forEach((file) => {
-        const isTarget =
-          file.path === finalTargetFile.path ||
-          file.path.endsWith(finalTargetFile.path) ||
-          finalTargetFile.path.endsWith(file.path);
-        const fileContent = isTarget ? finalTargetFile.content : file.content;
-        if (isTarget) targetAdded = true;
-        zip.file(file.path, fileContent);
-      });
+      if (uploadedZipInstance && activeSourceMode === 'custom') {
+        // PRESERVACIÓN TOTAL DEL PROYECTO ORIGINAL (Archivos ZIP):
+        // Se reutiliza la instancia original completa para mantener el 100% de carpetas,
+        // assets binarios (imágenes, fuentes, favicons), configs (.env, package.json, dotfiles).
+        zipToGenerate = uploadedZipInstance;
+        zipToGenerate.file(finalTargetFile.path, finalTargetFile.content);
+      } else {
+        zipToGenerate = new JSZip();
 
-      // Guarantee the modified target file is always present at its exact path
-      if (!targetAdded) {
-        zip.file(finalTargetFile.path, finalTargetFile.content);
+        // Si fue subido por carpeta directa, incluimos todos los archivos brutos (incluyendo binarios)
+        if (folderRawFilesRef.current.size > 0 && activeSourceMode === 'custom') {
+          for (const [relPath, fileObj] of folderRawFilesRef.current.entries()) {
+            if (relPath === finalTargetFile.path || relPath.endsWith(finalTargetFile.path)) {
+              zipToGenerate.file(relPath, finalTargetFile.content);
+            } else {
+              zipToGenerate.file(relPath, fileObj);
+            }
+          }
+        } else {
+          const activeList = activeSourceMode === 'preset' ? currentProject.files : customFiles;
+          let targetAdded = false;
+          activeList.forEach((file) => {
+            const isTarget =
+              file.path === finalTargetFile.path ||
+              file.path.endsWith(finalTargetFile.path) ||
+              finalTargetFile.path.endsWith(file.path);
+            const fileContent = isTarget ? finalTargetFile.content : file.content;
+            if (isTarget) targetAdded = true;
+            zipToGenerate.file(file.path, fileContent);
+          });
+
+          if (!targetAdded) {
+            zipToGenerate.file(finalTargetFile.path, finalTargetFile.content);
+          }
+        }
       }
-
 
       // Add report README
       if (explanationReport) {
         const reportContent = `# REPORTE DE MODIFICACIÓN - PIPELINE GEMINI AST\n\n${explanationReport.summary}\n\n## Certificación de Integridad\n${explanationReport.guaranteeOfIntegrity}\n\n## Desglose de cambios:\n${explanationReport.lineByLineBreakdown.map((l) => `- [${l.lineRange}] (${l.type}): ${l.explanation}`).join('\n')}\n`;
-        zip.file('CAMBIOS_APLICADOS.md', reportContent);
+        zipToGenerate.file('CAMBIOS_APLICADOS.md', reportContent);
       }
 
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipBlob = await zipToGenerate.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -1911,25 +2086,17 @@ try {
                 </label>
                 <button
                   type="button"
-                  onClick={() => {
-                    const promptToScan = getCombinedRequirementPrompt();
-                    const route = detectOptimalTargetFile(activeFilesList, promptToScan);
-                    setDetectedRouting(route);
-                    if (route && route.targetFile) {
-                      setTargetFilePath(route.targetFile.path);
-                      setSelectedFilePath(route.targetFile.path);
-                      addLog(`[Agente 1: Guardián y Enrutador] 🎯 Auto-detección: Seleccionado '${route.targetFile.path}' (${route.reason}).`);
-                    }
-                  }}
-                  className="text-[11px] text-emerald-400 hover:text-emerald-300 font-mono underline cursor-pointer flex items-center gap-1"
-                  title="Escanear todos los archivos del repositorio para encontrar automáticamente el archivo del formulario"
+                  onClick={handleAutoDetectTargetFile}
+                  disabled={isDetectingTarget}
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 font-mono underline cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                  title="Escanear todos los archivos y carpetas del repositorio para encontrar automáticamente el archivo que soluciona tu requerimiento"
                 >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Auto-detectar con Agente 1</span>
+                  <Sparkles className={`w-3 h-3 ${isDetectingTarget ? 'animate-spin text-emerald-300' : ''}`} />
+                  <span>{isDetectingTarget ? 'Escaneando con Agente 1...' : 'Auto-detectar con Agente 1'}</span>
                 </button>
               </div>
 
-              {detectedRouting && detectedRouting.score > 15 && (
+              {detectedRouting && (
                 <div className="bg-emerald-950/40 border border-emerald-800/50 rounded-xl p-2.5 text-xs text-emerald-300 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />

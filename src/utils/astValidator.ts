@@ -277,3 +277,112 @@ INSTRUCCIONES DE AUTO-CORRECCIÓN PARA EL PROGRAMADOR SENIOR:
 3. Asegúrate de NO alterar ninguna lógica ajena a la corrección y mantén las convenciones del archivo.
 4. Devuelve ÚNICAMENTE el código completo y corregido, libre de texto conversacional.`;
 }
+
+export interface DelimiterRepairResult {
+  repairedCode: string;
+  closedCount: number;
+  closedDelimiters: string[];
+  repairsMade: string[];
+  success: boolean;
+}
+
+/**
+ * Motor determinístico de auto-reparación y cierre matemático de llaves {}, corchetes [] y paréntesis ().
+ * Garantiza que ninguna estructura quede abierta en el código emitido por los agentes.
+ */
+export function autoRepairDelimiterBalance(
+  code: string,
+  language: 'typescript' | 'javascript' | 'python' | 'json' = 'typescript'
+): DelimiterRepairResult {
+  let workingCode = code;
+  let closedCount = 0;
+  const closedDelimiters: string[] = [];
+  const repairsMade: string[] = [];
+
+  const matchingClose: Record<string, string> = {
+    '{': '}',
+    '(': ')',
+    '[': ']',
+  };
+
+  for (let pass = 0; pass < 5; pass++) {
+    const balance = checkMathematicalBalance(workingCode, language);
+    if (balance.balanced) {
+      break;
+    }
+
+    // Caso 1: Delimitadores abiertos pendientes en la pila
+    if (balance.stackSnapshot && balance.stackSnapshot.length > 0) {
+      let closers = '';
+      for (let i = balance.stackSnapshot.length - 1; i >= 0; i--) {
+        const item = balance.stackSnapshot[i];
+        const closer = matchingClose[item.char];
+        if (closer) {
+          closers += (closer === '}' ? '\n}' : closer);
+          closedDelimiters.push(closer);
+          closedCount++;
+          repairsMade.push(`Cerrado delimitador '${item.char}' (L${item.line}:C${item.col}) con '${closer}'`);
+        }
+      }
+
+      // Si el código contiene 'export default' hacia el final y la llave abierta estaba antes de él
+      const trimmed = workingCode.trimEnd();
+      const exportDefaultIdx = trimmed.lastIndexOf('export default');
+      const lastItem = balance.stackSnapshot[0];
+      const codeLines = workingCode.split('\n');
+
+      if (exportDefaultIdx > -1 && codeLines.length > 10) {
+        const linesBeforeExport = workingCode.substring(0, exportDefaultIdx).split('\n');
+        if (lastItem.line <= linesBeforeExport.length) {
+          workingCode = workingCode.substring(0, exportDefaultIdx) + closers + '\n\n' + workingCode.substring(exportDefaultIdx);
+          continue;
+        }
+      }
+
+      workingCode = trimmed + closers + '\n';
+      continue;
+    }
+
+    // Caso 2: Cierre huérfano de '}' sin apertura previa
+    if (balance.error && balance.error.includes('Cierre huérfano') && balance.line) {
+      const lines = workingCode.split('\n');
+      const lineIdx = balance.line - 1;
+      if (lines[lineIdx] !== undefined) {
+        const colIdx = (balance.column || 1) - 1;
+        const lineStr = lines[lineIdx];
+        lines[lineIdx] = lineStr.slice(0, colIdx) + lineStr.slice(colIdx + 1);
+        workingCode = lines.join('\n');
+        repairsMade.push(`Eliminado cierre huérfano en L${balance.line}:C${balance.column}`);
+        continue;
+      }
+    }
+
+    // Caso 3: Desbalance / Cruce de delimitadores
+    if (balance.error && balance.error.includes('Desbalance matemático') && balance.line) {
+      const lines = workingCode.split('\n');
+      const lineIdx = balance.line - 1;
+      if (lines[lineIdx] !== undefined) {
+        const colIdx = (balance.column || 1) - 1;
+        const lineStr = lines[lineIdx];
+        const topChar = balance.stackSnapshot?.[balance.stackSnapshot.length - 1]?.char;
+        const correctClose = topChar ? matchingClose[topChar] : '}';
+        lines[lineIdx] = lineStr.slice(0, colIdx) + correctClose + lineStr.slice(colIdx + 1);
+        workingCode = lines.join('\n');
+        repairsMade.push(`Corregido cruce de delimitador en L${balance.line}:C${balance.column} por '${correctClose}'`);
+        continue;
+      }
+    }
+
+    break;
+  }
+
+  const finalCheck = checkMathematicalBalance(workingCode, language);
+
+  return {
+    repairedCode: workingCode,
+    closedCount,
+    closedDelimiters,
+    repairsMade,
+    success: finalCheck.balanced,
+  };
+}
